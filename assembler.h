@@ -43,19 +43,26 @@ struct fiksik_t
     int         ip_of_L_cmd;
 };
 
+struct cmd_t
+{
+    int* ptr_code;
+    int size_code;
+};
+
 struct assembler_t
 {
     FILE*       orig_file;
     FILE*       compiled_file;
     label_t*    labels_array;
     fiksik_t*   fixup_label;
-    int*        ptr_cmd;
+    cmd_t*        ptr_cmd;
 };
 
 int file_opener         ();
 int code_translator     ( assembler_t* ptr_ass );
 int create_new_label    ( assembler_t* ptr_ass, char label[NAME_LENGTH], int counter );
-int create_new_fiksik    ( assembler_t* ptr_ass, char label[NAME_LENGTH], int counter );
+int create_new_fiksik   ( assembler_t* ptr_ass, char label[NAME_LENGTH], int counter );
 int lobotomy            ( assembler_t* ptr_ass );
+int ass_ctor            ( assembler_t* ptr_ass );
 
 #endif
