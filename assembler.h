@@ -64,5 +64,6 @@ int create_new_label    ( assembler_t* ptr_ass, char label[NAME_LENGTH], int cou
 int create_new_fiksik   ( assembler_t* ptr_ass, char label[NAME_LENGTH], int counter );
 int lobotomy            ( assembler_t* ptr_ass );
 int ass_ctor            ( assembler_t* ptr_ass );
+int make_endfile        ( assembler_t* ptr_ass );
 
 #endif

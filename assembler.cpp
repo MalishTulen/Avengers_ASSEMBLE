@@ -14,9 +14,41 @@ int file_opener ()
 {
     assembler_t sossembler = {};
     assembler_t* ptr_ass = &sossembler;
+    cmd_t comandor = {};
+    ptr_ass->ptr_cmd = &comandor;
 
-    ass_ctor ( ptr_ass );
+//--------------------------------------------------------
+fprintf ( stderr, "DEBUG0\n");
+    ptr_ass->orig_file = fopen ( "original.asm", "r" );
+    ptr_ass->compiled_file = fopen ( "compilated.txt", "w" );
+    label_t labels_array [ LABELS_ARRAY_SIZE ] = {};
+    fiksik_t fixup_label [ LABELS_ARRAY_SIZE ] = {};
+    ptr_ass->fixup_label =  fixup_label;
+    ptr_ass->labels_array = labels_array;
 
+fprintf ( stderr, "DEBUG0.1\n");
+
+    ptr_ass->ptr_cmd->ptr_code = ( int* ) calloc ( MAX_CMD_SIZE, sizeof ( int ) );
+
+fprintf ( stderr, "DEBUG1\n");
+
+    ptr_ass->ptr_cmd->size_code = -1;
+
+//fprintf ( stderr, " size : %d\n", ptr_ass->ptr_cmd->size_code );
+
+    for ( int i = 0; i < LABELS_ARRAY_SIZE; i++ )
+    {
+        ptr_ass->labels_array [ i ].ip = POISON_VALUE;
+        strncpy ( ptr_ass->labels_array [ i ].name, "POISON", NAME_LENGTH );
+
+        ptr_ass->fixup_label [ i ].ip_of_L_cmd = POISON_VALUE;
+        strncpy ( ptr_ass->fixup_label [ i ].name, "POISON", NAME_LENGTH );
+
+        /*fprintf ( stderr, "label: '%s' %d, fixup: '%s' %d\n",  ptr_ass->labels_array [ i ].name, ptr_ass->labels_array [ i ].ip,\
+                                                               ptr_ass->fixup_label [ i ].name, ptr_ass->fixup_label [ i ].ip_of_L_cmd );
+   */
+    }
+//---------------------------------------------------------------------------
 fprintf ( stderr, "DEBUG2\n");
 
     code_translator ( ptr_ass );
@@ -25,8 +57,36 @@ fprintf ( stderr, "DEBUG3\n");
 
     for ( int i = 0; i < ptr_ass->ptr_cmd->size_code; i++ )
     {
-        printf ( "%d: %d\n", i, ptr_ass->ptr_cmd->ptr_code [ i ]);
+        printf ( "%d: %d\n", i+1 , ptr_ass->ptr_cmd->ptr_code [ i ]);
     }
+
+    for ( int i = 0; i < LABELS_ARRAY_SIZE; i++ )
+    {
+        if ( strcmp ( ptr_ass->fixup_label [ i ].name, "POISON" ) != 0 )
+        {
+fprintf ( stderr, "fixup_name: %s\n", ptr_ass->fixup_label[ i ].name );
+            for ( int j = 0; j < LABELS_ARRAY_SIZE; j++ )
+            {
+//fprintf ( stderr, "%s and %s\n", ptr_ass->fixup_label [ i ].name, ptr_ass->labels_array [ j ].name );
+                if ( strcmp ( ptr_ass->fixup_label [ i ].name, ptr_ass->labels_array [ j ].name ) == 0 )
+                {
+fprintf ( stderr, "fixup_name: '%s' to '%s', %d to %d\n", ptr_ass->fixup_label[ i ].name, ptr_ass->labels_array [ j ].name,\
+                                                          ptr_ass->ptr_cmd->ptr_code [ ptr_ass->fixup_label[ i ].ip_of_L_cmd ], ptr_ass->labels_array [ j ].ip);
+                    fprintf ( stderr, "ip of L comand: %d\n", ptr_ass->fixup_label[ i ].ip_of_L_cmd );
+                    ptr_ass->ptr_cmd->ptr_code [ ptr_ass->fixup_label[ i ].ip_of_L_cmd ] = ptr_ass->labels_array [ j ].ip;
+                    break;
+                }
+            }
+        }
+
+    }
+
+    for ( int i = 0; i < ptr_ass->ptr_cmd->size_code; i++ )
+    {
+        printf ( "%d: %d\n", i+1, ptr_ass->ptr_cmd->ptr_code [ i ]);
+    }
+
+    make_endfile ( ptr_ass );
 
     fclose ( ptr_ass->orig_file );
     fclose ( ptr_ass->compiled_file );
@@ -41,18 +101,19 @@ fprintf ( stderr, "DEBUG_CODE_TRANSLATOR1\n");
 
     while  ( fscanf ( ptr_ass->orig_file, "%s", cmd ) != EOF )
     {
-        //ptr_ass->ptr_cmd->size_code += 1;
+//fprintf ( stderr, "cmd: '%s'\n", cmd );
+        ptr_ass->ptr_cmd->size_code++;
         if ( strcmp ( cmd, "PUSH" ) == 0) {
-fprintf ( stderr, "DEBUG_CODE_TRANSLATOR( PUSH1 )\n");
+//fprintf ( stderr, "DEBUG_CODE_TRANSLATOR( PUSH1 )\n");
             int operand = 0;
-            ptr_ass->ptr_cmd->ptr_code [ 0 ] = PUSH;
-fprintf ( stderr, "DEBUG: size_cmd = %d\n", ptr_ass->ptr_cmd->size_code );
-fprintf ( stderr, "DEBUG_CODE_TRANSLATOR( %d )\n", * (ptr_ass->ptr_cmd->ptr_code + ptr_ass->ptr_cmd->size_code) );
-fprintf ( stderr, "DEBUG_CODE_TRANSLATOR( PUSH2 )\n");
+            ptr_ass->ptr_cmd->ptr_code [ ptr_ass->ptr_cmd->size_code ] = PUSH;
+//fprintf ( stderr, "DEBUG: size_cmd = %d\n", ptr_ass->ptr_cmd->size_code );
+//fprintf ( stderr, "DEBUG_CODE_TRANSLATOR( %d )\n", * (ptr_ass->ptr_cmd->ptr_code + ptr_ass->ptr_cmd->size_code) );
+//fprintf ( stderr, "DEBUG_CODE_TRANSLATOR( PUSH2 )\n");
             fscanf ( ptr_ass->orig_file, "%d", &operand );
             ptr_ass->ptr_cmd->size_code++;
-fprintf ( stderr, "operand: %d\n", operand );
-fprintf ( stderr, "DEBUG_CODE_TRANSLATOR( PUSH3 )\n");
+//fprintf ( stderr, "operand: %d\n", operand );
+//fprintf ( stderr, "DEBUG_CODE_TRANSLATOR( PUSH3 )\n");
             ptr_ass->ptr_cmd->ptr_code [ ptr_ass->ptr_cmd->size_code ] = operand;
             continue;
         }
@@ -87,9 +148,10 @@ fprintf ( stderr, "DEBUG_CODE_TRANSLATOR( PUSH3 )\n");
         else if ( strcmp ( cmd, "PUSHR" ) == 0){
             char reg[5] = {};
             fscanf ( ptr_ass->orig_file, "%s", reg );
+            //reg [ 1 ] = '\0';
             ptr_ass->ptr_cmd->ptr_code [ ptr_ass->ptr_cmd->size_code ] = PUSHR;
             ptr_ass->ptr_cmd->size_code++;
-            ptr_ass->ptr_cmd->ptr_code [ ptr_ass->ptr_cmd->size_code ] = int ( reg - 'A' );
+            ptr_ass->ptr_cmd->ptr_code [ ptr_ass->ptr_cmd->size_code ] = atoi ( reg - 'A' );
             continue;
         }
         else if ( strcmp ( cmd, "POP" ) == 0){
@@ -97,7 +159,7 @@ fprintf ( stderr, "DEBUG_CODE_TRANSLATOR( PUSH3 )\n");
             fscanf ( ptr_ass->orig_file, "%s", reg );
             ptr_ass->ptr_cmd->ptr_code [ ptr_ass->ptr_cmd->size_code ] = POP;
             ptr_ass->ptr_cmd->size_code++;
-            ptr_ass->ptr_cmd->ptr_code [ ptr_ass->ptr_cmd->size_code ] = int ( reg - 'A' );
+            ptr_ass->ptr_cmd->ptr_code [ ptr_ass->ptr_cmd->size_code ] = atoi ( reg - 'A' );
             continue;
         }
         else if ( strcmp ( cmd, "JMP" ) == 0){
@@ -218,7 +280,8 @@ fprintf ( stderr, "DEBUG_CODE_TRANSLATOR( PUSH3 )\n");
                     }
                     else
                     {
-                        where [ strlen ( where ) -1 ] = '\0';
+                        printf ( "ELSE STARTED!\n" );
+                        where [ strlen ( where ) - 1 ] = '\0';
                         ptr_ass->ptr_cmd->ptr_code [ ptr_ass->ptr_cmd->size_code ] = POISON_VALUE;
                         create_new_fiksik ( ptr_ass, where, ptr_ass->ptr_cmd->size_code );
                         break;
@@ -331,19 +394,20 @@ fprintf ( stderr, "DEBUG_CODE_TRANSLATOR( PUSH3 )\n");
             }
             continue;
         }
+        else if ( cmd [ strlen( cmd ) - 1 ] == ':')
+        {
+            create_new_label ( ptr_ass, cmd, ptr_ass->ptr_cmd->size_code );
+
+            lobotomy ( ptr_ass );
+
+            continue;
+        }
 
         else fprintf ( stderr, "ERROR SYNTAX: cmd = %s\n", cmd );
         break;
     }
     ptr_ass->ptr_cmd->size_code++;
 
-    for ( int i = 0; i < LABELS_ARRAY_SIZE; i++ )
-    {
-        if ( strcmp ( ptr_ass->fixup_label [ i ].name, "POISON" ) != 0 )
-        {
-
-        }
-    }
     // fwrite!!
     return FUNC_DONE; // TODO: emoe
 }
@@ -354,11 +418,13 @@ int create_new_label ( assembler_t* ptr_ass, char label[NAME_LENGTH], int counte
     {
         if ( ptr_ass->labels_array[ i ].ip == POISON_VALUE )
         {
+            label [ strlen ( label ) - 1 ] = '\0';
             strncpy ( ptr_ass->labels_array[ i ].name, label, NAME_LENGTH );
             ptr_ass->labels_array[ i ].ip = counter;
             break;
         }
     }
+    //lobotomy ( ptr_ass );
 
     return FUNC_DONE;
 }
@@ -406,8 +472,6 @@ fprintf ( stderr, "DEBUG0\n");
     fiksik_t fixup_label [ LABELS_ARRAY_SIZE ] = {};
     ptr_ass->fixup_label =  fixup_label;
     ptr_ass->labels_array = labels_array;
-    cmd_t comandor = {};
-    ptr_ass->ptr_cmd = &comandor;
 
 fprintf ( stderr, "DEBUG0.1\n");
 
@@ -426,6 +490,16 @@ fprintf ( stderr, "DEBUG1\n");
 
         ptr_ass->fixup_label [ i ].ip_of_L_cmd = POISON_VALUE;
         strncpy ( ptr_ass->fixup_label [ i ].name, "POISON", NAME_LENGTH );
+    }
+
+    return FUNC_DONE;
+}
+
+int make_endfile ( assembler_t* ptr_ass )
+{
+    for ( int i = 0; i < ptr_ass->ptr_cmd->size_code; i++ )
+    {
+        fprintf ( ptr_ass->compiled_file, "%d ", ptr_ass->ptr_cmd->ptr_code[ i ] );
     }
 
     return FUNC_DONE;
