@@ -19,7 +19,9 @@ enum FUNC_INITS
     JB      = 13,
     JBE     = 14,
     JE      = 15,
-    JNE     = 16
+    JNE     = 16,
+    CALL    = 17,
+    RET     = 18,
 };
 const int READING = 1;
 const int VOZRAST_SOGLASIYA_V_KITAYE = 14;
